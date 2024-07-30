@@ -26,7 +26,6 @@ public class GetGitHubServiceImpl implements GetGitHubService {
     public GetGitHubServiceImpl(WebClient.Builder webClientBuilder) {
         this.webClient = webClientBuilder.build();
     }
-
     @Override
     public Mono<ResponseEntity<?>> getRepositories(String username) {
         return webClientBuilder.build()
@@ -48,10 +47,10 @@ public class GetGitHubServiceImpl implements GetGitHubService {
 
             List<JsonNode> nonForkRepos = getNonForkRepos(rootNode);
 
-            JsonNode firstRepo = rootNode.get(0);
-            JsonNode login = firstRepo.path("owner").path("login");
+            String repoOwner = nonForkRepos.get(0).path("owner").path("login").asText();
 
-            List<Mono<Map<String, Object>>> fullList = getFullList(nonForkRepos);
+
+            List<Mono<Map<String, Object>>> fullList = getFullList(nonForkRepos, repoOwner);
 
             return Flux.merge(fullList).collectList()
                     .map(fullInfo -> ResponseEntity.ok().body(fullInfo));
@@ -62,11 +61,11 @@ public class GetGitHubServiceImpl implements GetGitHubService {
         }
     }
 
-    private List<Mono<Map<String, Object>>> getFullList(List<JsonNode> nonForkRepos) {
+    private List<Mono<Map<String, Object>>> getFullList(List<JsonNode> nonForkRepos, String repoOwner) {
         List<Mono<Map<String, Object>>> fullList = new ArrayList<>();
         nonForkRepos.forEach(repo -> {
+
             String repoName = repo.path("name").asText();
-            String repoOwner = repo.path("owner").path("login").asText();
 
             Mono<Map<String, Object>> branchList = getBranchList(repoName, repoOwner);
             fullList.add(branchList);
@@ -109,7 +108,7 @@ public class GetGitHubServiceImpl implements GetGitHubService {
         List<Mono<Map<String, String>>> branchCommitList = new ArrayList<>();
         branches.forEach(branch -> {
             String branchName = branch.path("name").asText();
-            Mono<Map<String, String>> branchCommitString = webClientBuilder.build()
+            Mono<Map<String, String>> branchCommitInfo = webClientBuilder.build()
                     .get()
                     .uri("https://api.github.com/repos/{owner}/{repo}/commits?sha={branch}", repoOwner, repoName, branchName)
                     .retrieve()
@@ -122,8 +121,9 @@ public class GetGitHubServiceImpl implements GetGitHubService {
                         branchInfo.put("latestCommitSha", commitSha);
                         return branchInfo;
                     });
-            branchCommitList.add(branchCommitString);
+            branchCommitList.add(branchCommitInfo);
         });
         return branchCommitList;
     }
+
 }

@@ -16,7 +16,7 @@ import java.util.*;
 
 
 @RestController
-@RequestMapping("/GetGitHubRepo/")
+@RequestMapping("/getGitHubRepo")
 public class GetGitHubRepoController {
 
     private final GetGitHubService getGitHubService;
@@ -33,6 +33,8 @@ public class GetGitHubRepoController {
     public Mono<ResponseEntity<?>> getRepositories(@RequestParam String username) {
         return getGitHubService.getRepositories(username);
     }
+
+
 
 }
 
